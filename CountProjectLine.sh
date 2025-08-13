@@ -26,14 +26,14 @@ fi
 # Behavior:
 # - No args: exclude Markdown (.md), count total lines of Git-tracked files,
 #   append one line to the fixed log file ($HOME/line_count.log) in the format:
-#   PATH - TIMESTAMP - VALUE (VALUE becomes "Empty" if zero), and print that exact line.
+#   PATH - TIMESTAMP - VALUE - DIFF (VALUE becomes "Empty" if zero; DIFF is signed +N/-N vs previous), and print that exact line.
 # - Arg 1: regex pattern to exclude (default: \\.md$)
-# - -s | --show: print only log lines for the current working directory (no counting). Log path is fixed.
+# - -s | --show: print only log lines for the current working directory (no counting), showing per-line signed diffs. Log path is fixed.
 
 # Fixed log file path
 LOG_FILE="$HOME/line_count.log"
 
-# Show mode: print current directory once, then log content filtered by current directory (time - value) and exit
+# Show mode: print current directory once, then log content filtered by current directory (time - value (+/-)) and exit
 if [[ ${1:-} == "-s" || ${1:-} == "--show" ]]; then
   if [[ -n "$COLOR_RESET" ]]; then
     printf '%b\n' "${COLOR_BOLD}${COLOR_CYAN}${PWD}${COLOR_RESET}"
@@ -48,6 +48,8 @@ if [[ ${1:-} == "-s" || ${1:-} == "--show" ]]; then
           -v c_dec="$COLOR_RED" \
           -v c_empty="$COLOR_YELLOW" \
           -v c_reset="$COLOR_RESET" \
+          -v c_diff_plus="$COLOR_GREEN" \
+          -v c_diff_minus="$COLOR_RED" \
           -F ' - ' '
           $1==p{
             vStr=$3;
@@ -59,11 +61,23 @@ if [[ ${1:-} == "-s" || ${1:-} == "--show" ]]; then
             } else {
               vc=c_inc;
             }
-            printf "%s%s%s - %s%s%s\n", c_time, $2, c_reset, vc, vStr, c_reset;
+            diff=(havePrev? v-prev : v);
+            sign=(diff>=0? "+":"-");
+            mag=(diff>=0? diff:-diff);
+            dc=(diff>=0? c_diff_plus : c_diff_minus);
+            printf "%s%s%s - %s%s%s (%s%s%d%s)\n", c_time, $2, c_reset, vc, vStr, c_reset, dc, sign, mag, c_reset;
             prev=v; havePrev=1;
           }' "$LOG_FILE"
     else
-      awk -v p="$PWD" -F ' - ' '$1 == p { print $2 " - " $3 }' "$LOG_FILE"
+      awk -v p="$PWD" -F ' - ' '
+        $1==p{
+          vStr=$3; v=(vStr=="Empty"?0:vStr+0);
+          if (!havePrev) { diff=v; } else { diff=v-prev; }
+          sign=(diff>=0? "+":"-"); mag=(diff>=0? diff:-diff);
+          printf "%s - %s (%s%d)\n", $2, vStr, sign, mag;
+          prev=v; havePrev=1;
+        }
+      ' "$LOG_FILE"
     fi
   fi
   exit 0
@@ -114,7 +128,19 @@ if [[ -n "${LAST_LINE}" ]]; then
   fi
 fi
 
-LINE_OUTPUT_RAW="$PWD - $TIMESTAMP - $RESULT_VALUE"
+# Compute diff versus previous
+if [[ -n "${PREV_NUM}" ]]; then
+  DIFF_NUM=$(( COUNT - PREV_NUM ))
+else
+  DIFF_NUM=$COUNT
+fi
+if (( DIFF_NUM >= 0 )); then
+  DIFF_STR="+${DIFF_NUM}"
+else
+  DIFF_STR="-$((-DIFF_NUM))"
+fi
+
+LINE_OUTPUT_RAW="$PWD - $TIMESTAMP - $RESULT_VALUE - $DIFF_STR"
 
 # When printing to terminal, colorize: path bold-cyan, timestamp green, value green or yellow (Empty)
 if [[ -t 1 && -n "$COLOR_RESET" ]]; then
@@ -130,7 +156,12 @@ if [[ -t 1 && -n "$COLOR_RESET" ]]; then
       fi
     fi
   fi
-  LINE_OUTPUT_COLORED="${COLOR_BOLD}${COLOR_CYAN}$PWD${COLOR_RESET} - ${COLOR_GREEN}$TIMESTAMP${COLOR_RESET} - ${VALUE_COLOR}$RESULT_VALUE${COLOR_RESET}"
+  if (( DIFF_NUM >= 0 )); then
+    DIFF_COLOR="$COLOR_GREEN"
+  else
+    DIFF_COLOR="$COLOR_RED"
+  fi
+  LINE_OUTPUT_COLORED="${COLOR_BOLD}${COLOR_CYAN}$PWD${COLOR_RESET} - ${COLOR_GREEN}$TIMESTAMP${COLOR_RESET} - ${VALUE_COLOR}$RESULT_VALUE${COLOR_RESET} (${DIFF_COLOR}$DIFF_STR${COLOR_RESET})"
 else
   LINE_OUTPUT_COLORED="$LINE_OUTPUT_RAW"
 fi
