@@ -48,7 +48,7 @@ fi
 # zsh 환경에서 즉시 적용
 if [ -n "${ZSH_VERSION-}" ]; then
   source "${ZSHRC}"
-  echo "✅ 설정이 현재 세션에 적용되었습니다"
+  echo "설정이 현재 세션에 적용되었습니다"
 else
-  echo "📝 zsh를 시작하고 'source \"${ZSHRC}\"'를 실행하여 변경사항을 적용하세요"
+  echo "zsh를 시작하고 'source \"${ZSHRC}\"'를 실행하여 변경사항을 적용하세요"
 fi

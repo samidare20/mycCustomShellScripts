@@ -1,0 +1,9 @@
+alias c="clear"
+alias gs="clear ; git status"
+alias ga="clear ; git add ."
+alias gc='f(){clear ; git commit -m "$@" ; unset -f f;}; f'
+alias gac='f(){clear ; git commit -a -m "$@" ; unset -f f;}; f'
+alias gp="clear ; git push"
+alias gf="clear;  git fetch"
+alias gr='f(){clear ; git rebase -i HEAD~"$@" ; unset -f f;};f'
+alias gm='f(){clear ; git checkout "$@" ; git pull ; git checkout dev ; git merge "$@" ; unset -f f;};f'

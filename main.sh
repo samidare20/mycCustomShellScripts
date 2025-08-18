@@ -22,7 +22,9 @@ cpl() {
 if [ -f "${__main_dir}/KeyBind.sh" ]; then
 	source "${__main_dir}/KeyBind.sh"
 fi
-
+if [ -f "${__main_dir}/aliass.sh" ]; then
+	source "${__main_dir}/aliass.sh"
+fi
 # Display available commands
 show-commands() {
 	echo "Available commands:"
