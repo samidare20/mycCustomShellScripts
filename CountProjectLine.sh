@@ -4,12 +4,12 @@ set -euo pipefail
 
 # Color setup for terminal outputs (enabled only when stdout is a TTY)
 if [[ -t 1 ]]; then
-  COLOR_CYAN=$'\033[36m'
-  COLOR_GREEN=$'\033[32m'
-  COLOR_RED=$'\033[31m'
-  COLOR_YELLOW=$'\033[33m'
-  COLOR_BOLD=$'\033[1m'
-  COLOR_RESET=$'\033[0m'
+  COLOR_CYAN='\033[36m'
+  COLOR_GREEN='\033[32m'
+  COLOR_RED='\033[31m'
+  COLOR_YELLOW='\033[33m'
+  COLOR_BOLD='\033[1m'
+  COLOR_RESET='\033[0m'
 else
   COLOR_CYAN=""
   COLOR_GREEN=""
@@ -161,12 +161,14 @@ if [[ -t 1 && -n "$COLOR_RESET" ]]; then
   else
     DIFF_COLOR="$COLOR_RED"
   fi
-  LINE_OUTPUT_COLORED="${COLOR_BOLD}${COLOR_CYAN}$PWD${COLOR_RESET} - ${COLOR_GREEN}$TIMESTAMP${COLOR_RESET} - ${VALUE_COLOR}$RESULT_VALUE${COLOR_RESET} (${DIFF_COLOR}$DIFF_STR${COLOR_RESET})"
+  LINE_OUTPUT_COLORED=$(printf "%b%b%s%b - %b%s%b - %b%s%b (%b%s%b)" \
+    "$COLOR_BOLD" "$COLOR_CYAN" "$PWD" "$COLOR_RESET" \
+    "$COLOR_GREEN" "$TIMESTAMP" "$COLOR_RESET" \
+    "$VALUE_COLOR" "$RESULT_VALUE" "$COLOR_RESET" \
+    "$DIFF_COLOR" "$DIFF_STR" "$COLOR_RESET")
 else
   LINE_OUTPUT_COLORED="$LINE_OUTPUT_RAW"
 fi
-
-# LAST_LINE prepared above
 
 if [[ -n "${LAST_LINE}" ]]; then
   LAST_VALUE=$(printf '%s\n' "$LAST_LINE" | awk -F ' - ' '{print $3}')
@@ -175,7 +177,7 @@ if [[ -n "${LAST_LINE}" ]]; then
     LINE_NO=$(awk -v p="$PWD" -F ' - ' '$1==p{n=NR} END{print n+0}' "$LOG_FILE")
     awk -v ln="$LINE_NO" -v nl="$LINE_OUTPUT_RAW" 'NR==ln{print nl; next} {print $0}' "$LOG_FILE" >"$LOG_FILE.tmp"
     mv "$LOG_FILE.tmp" "$LOG_FILE"
-    printf '%s\n' "$LINE_OUTPUT_COLORED"
+    printf '%b\n' "$LINE_OUTPUT_COLORED"
     exit 0
   fi
 fi
@@ -184,4 +186,4 @@ fi
 printf '%s\n' "$LINE_OUTPUT_RAW" >>"$LOG_FILE"
 
 # Print exactly the written line to stdout
-printf '%s\n' "$LINE_OUTPUT_COLORED"
+printf '%b\n' "$LINE_OUTPUT_COLORED"
